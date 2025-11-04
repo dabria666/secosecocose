@@ -2,6 +2,25 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+  <!-- SECose: Firebase config bootstrap (no modal, no console) -->
+<script>
+(function(){
+  var KEY = 'secose_firebase';
+  // Eğer bu tarayıcıda ayar yoksa otomatik yaz
+  if (!localStorage.getItem(KEY)) {
+    localStorage.setItem(KEY, JSON.stringify({
+      apiKey: "AIzaSyDFal7PT4q1lx1vwvljTgKXifWT9LYyStw",
+      authDomain: "secose-75a51.firebaseapp.com",
+      databaseURL: "https://secose-75a51-default-rtdb.firebaseio.com",
+      projectId: "secose-75a51",
+      storageBucket: "secose-75a51.appspot.com",  // .app değil .appspot.com
+      messagingSenderId: "219842486035",
+      appId: "1:219842486035:web:76b201eb537a9dba5604e6"
+    }));
+  }
+})();
+</script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>secose & cocose coop. — seçose (Realtime v5)</title>
