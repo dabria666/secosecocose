@@ -1,0 +1,821 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>secose & cocose coop. — seçose (Realtime v5)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --bg:#FAF3F6; --card:#F6E8EE; --accent:#F1D9E4; --cta:#D9A7B3; --text:#3E2B31; --sub:#6B4B55; }
+    body{ background:var(--bg); color:var(--text); }
+  
+/* === POP-UP FIX === */
+.pop {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  pointer-events: auto;
+}
+
+.pop > div {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.20);
+  position: relative;
+  z-index: 100000;
+  pointer-events: auto;
+}
+
+.pop h3, .pop p, .pop button {
+  position: relative;
+  z-index: 100001;
+}
+.pop.hidden { display: none !important; }
+
+body * { pointer-events: auto; }
+
+
+/* === Popup internal Next button + Lofi toggle === */
+.pop .btn-next, .modal-next-btn{
+  background: #D9A7B3;
+  color: #fff;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+.modal-next-wrap{ display:flex; justify-content:flex-end; margin-top:14px; }
+
+.lofi-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 230, 240, 0.85);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  transition: transform .2s ease, opacity .2s ease;
+  user-select: none;
+  z-index: 1000000;
+}
+.lofi-btn:hover { transform: scale(1.12); }
+.lofi-btn.playing { animation: pulse 1.4s infinite ease-in-out; }
+@keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.07);} 100%{transform:scale(1);} }
+
+
+/* === FIX v2: popup overlay and internal next button === */
+.pop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+.pop > div {
+  position: relative;
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 720px;
+  width: 92%;
+  box-shadow: 0 12px 40px rgba(0,0,0,.20);
+  pointer-events: auto !important;
+  z-index: 1000000 !important;
+}
+.pop.hidden { display: none !important; }
+
+/* internal next button */
+.pop .popup-next-wrap{ display:flex; justify-content:flex-end; margin-top:14px; }
+.pop .popup-next-btn{
+  background: #D9A7B3; color:#fff; padding:10px 14px; border:none;
+  border-radius:12px; font-weight:600; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+
+
+/* === FIX v3: reliable inline Next button inside popup === */
+.pop .popup-next-wrap{ display:flex; justify-content:flex-end; margin-top:14px; }
+.pop .popup-next-btn{
+  background:#D9A7B3;color:#fff;padding:10px 14px;border:none;border-radius:12px;
+  font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+.pop .popup-next-btn:active{ transform: translateY(1px); }
+
+
+/* === Popup internal Next button (final) === */
+.pop .popup-next-wrap{ display:flex; justify-content:flex-end; margin-top:14px; }
+.pop .popup-next-btn{
+  background:#D38FA0;color:#fff;padding:10px 16px;border:none;border-radius:12px;
+  font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.12);
+}
+.pop .popup-next-btn:hover{ transform: translateY(-1px); }
+.pop .popup-next-btn:active{ transform: translateY(0); }
+
+
+/* === FINAL: In-popup Next button absolutely positioned === */
+.pop > div { padding-bottom: 64px !important; }
+.pop .popup-next-fixed{
+  position:absolute; right:16px; bottom:14px;
+  background:#D38FA0; color:#fff; padding:10px 16px; border:none;
+  border-radius:12px; font-weight:700; cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.12); z-index:100001;
+}
+.pop .popup-next-fixed:hover{ transform: translateY(-1px); }
+
+
+</style>
+  <!-- Firebase (compat for simpler API) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<style>
+.summary-btn{
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  background: #EEC9D6;
+  color: #3E2B31;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  z-index: 1000002;
+}
+.summary-btn:hover{ transform: translateY(-1px); }
+</style>
+
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const {useState, useEffect} = React;
+
+const palette = { bg: "bg-[#FAF3F6]", card: "bg-[#F6E8EE]", accent: "bg-[#F1D9E4]", cta: "bg-[#D9A7B3]", text: "text-[#3E2B31]", sub: "text-[#6B4B55]", ring: "ring-[#D9A7B3]" };
+const LS = {
+  APP: "secose.realtime.v5",
+  FIRE: "secose.firebase.config"
+};
+
+function genKey(n=10){ const c="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"; let s=""; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function normQ(q){ if(!q) return null; const t=q.type==="yn"?"yn":q.type==="open"?"open":null; const c=typeof q.content==="string"?q.content.trim():null; if(!t||!c) return null; return {type:t, content:c}; }
+function fmt(q, txt){ return q.type==="yn"? (txt||"(seçilmedi)") : (txt||"(boş)"); }
+
+function useFirebaseConfig(){
+  const [cfg, setCfg] = useState(null);
+  useEffect(()=>{
+    try{ const raw = localStorage.getItem(LS.FIRE); if(raw) setCfg(JSON.parse(raw)); }catch(e){}
+  },[]);
+  function save(json){
+    localStorage.setItem(LS.FIRE, JSON.stringify(json));
+    setCfg(json);
+  }
+  function clear(){
+    localStorage.removeItem(LS.FIRE);
+    setCfg(null);
+  }
+  return { cfg, save, clear };
+}
+
+function App(){
+  const [state, setState] = useState({ sessionKey: null, role: null }); // role: 'f' or 'm'
+  const [fb, setFb] = useState(null); // {app, db}
+  const fire = useFirebaseConfig();
+
+  // Parse URL for session and role
+  useEffect(()=>{
+    const params = new URLSearchParams(window.location.search);
+    const k = params.get("k");
+    const r = params.get("r");
+    setState(s => ({...s, sessionKey: k, role: r}));
+  },[]);
+
+  // Initialize firebase when config available
+  useEffect(()=>{
+    if(!fire.cfg) return;
+    if(fb) return;
+    try {
+      const app = firebase.initializeApp(fire.cfg);
+      const db = firebase.database();
+      setFb({app, db});
+    } catch(e){
+      console.error(e);
+      alert("Firebase başlatılamadı. Config'i kontrol et.");
+    }
+  }, [fire.cfg]);
+
+  if(!fire.cfg){
+    return <SetupFirebase onSave={fire.save} />;
+  }
+  if(!fb){
+    return <Loading text="Firebase başlatılıyor..." />;
+  }
+  return <Router fb={fb} state={state} />;
+}
+
+function SetupFirebase({onSave}){
+  const [text, setText] = useState("");
+  const sample = {
+    "apiKey": "XXXX",
+    "authDomain": "yourapp.firebaseapp.com",
+    "databaseURL": "https://yourapp-default-rtdb.firebaseio.com",
+    "projectId": "yourapp",
+    "storageBucket": "yourapp.appspot.com",
+    "messagingSenderId": "000000",
+    "appId": "1:000000:web:abcdef"
+  };
+  function save(){
+    try{
+      const cfg = JSON.parse(text);
+      onSave(cfg);
+    }catch(e){ alert("Geçersiz JSON"); }
+  }
+  return (
+    <div className="min-h-screen">
+      <div className="max-w-3xl mx-auto p-6 sm:p-8">
+        <Header />
+        <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+          <h2 className="text-2xl font-semibold mb-4">Firebase ayarla (tek seferlik)</h2>
+          <p className={`${palette.sub} text-sm mb-3`}>Realtime için bir Firebase projesi aç, Realtime Database'i etkinleştir (test modu), config JSON'unu buraya yapıştır.</p>
+          <textarea value={text} onChange={e=>setText(e.target.value)} className={`w-full h-48 rounded-xl px-3 py-2 outline-none focus:ring-2 ${palette.ring}`} placeholder={JSON.stringify(sample, null, 2)} />
+          <div className="mt-3 flex gap-2">
+            <button onClick={save} className={`px-4 py-2 rounded-xl font-semibold ${palette.cta} text-white`}>Kaydet</button>
+            <a className="text-xs underline" href="https://console.firebase.google.com/" target="_blank">Firebase Console</a>
+          </div>
+          <p className={`text-xs ${palette.sub} mt-3`}>Not: Güvenlik için Realtime Database kurallarını daha sonra kısıtlarsın. Prototip için test modu iş görür.</p>
+        </div>
+        <Footer/>
+      </div>
+    </div>
+  );
+}
+
+function Loading({text}){ return <div className="p-8 text-center">{text||"Yükleniyor..."}</div>; }
+
+function Router({fb, state}){
+  const {sessionKey, role} = state;
+  if(!sessionKey || !role){
+    return <AccessScreen fb={fb} />;
+  }
+  if(role==="f"){
+    return <FemaleApp fb={fb} sessionKey={sessionKey} />;
+  } else {
+    return <MaleApp fb={fb} sessionKey={sessionKey} />;
+  }
+}
+
+function AccessScreen({fb}){
+  const [k, setK] = useState("");
+  function createAsFemale(){
+    const key = genKey(10);
+    const url = new URL(window.location.href);
+    url.searchParams.set("k", key);
+    url.searchParams.set("r", "f");
+    window.location.href = url.toString();
+  }
+  function goMale(){
+    if(!k.trim()) return alert("Anahtar gir");
+    const url = new URL(window.location.href);
+    url.searchParams.set("k", k.trim());
+    url.searchParams.set("r", "m");
+    window.location.href = url.toString();
+  }
+  return (
+    <div className="min-h-screen">
+      <div className="max-w-3xl mx-auto p-6 sm:p-8">
+        <Header />
+        <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+          <h2 className="text-2xl font-semibold mb-4">seçose - çoçose coop — Oturum</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className={`rounded-xl p-4 ${palette.accent}`}>
+              <div className="text-lg font-semibold mb-2">🧟‍♀️ Oturumu Başlat</div>
+              <p className={`${palette.sub} text-sm mb-3`}>burası İrem’in köşesi, sen bekle 🧟‍♂️</p>
+              <button onClick={createAsFemale} className={`px-4 py-2 rounded-xl font-semibold ${palette.cta} text-white`}>Oturumu Başlat (🧟‍♀️)</button>
+            </div>
+            <div className={`rounded-xl p-4 ${palette.accent}`}>
+              <div className="text-lg font-semibold mb-2">🧟‍♂️ Link ile Katıl</div>
+              <div className="text-sm mb-2">Kodu gir, öptüm 💋</div>
+              <div className="flex gap-2">
+                <input className={`flex-1 px-3 py-2 rounded-xl ${palette.accent} outline-none`} placeholder="ANAHTAR" value={k} onChange={e=>setK(e.target.value)} />
+                <button onClick={goMale} className="px-3 py-2 rounded-xl bg-white/80">Katıl</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <Footer/>
+      </div>
+    </div>
+  );
+}
+
+// Firebase helpers
+function sessionRef(db, key){ return db.ref("sessions/"+key); }
+function onceGet(ref){ return ref.get(); }
+
+// Female app (builder + play + reset)
+function FemaleApp({fb, sessionKey}){
+  const db = fb.db;
+  const [questions, setQuestions] = useState([]);
+  const [started, setStarted] = useState(false);
+  const [snap, setSnap] = useState(null);
+
+  useEffect(()=>{
+    // subscribe whole session
+    const ref = sessionRef(db, sessionKey);
+    ref.on("value", s => setSnap(s.val()));
+    return ()=> ref.off();
+  }, [db, sessionKey]);
+
+  useEffect(()=>{
+    if(!snap) return;
+    setStarted(!!snap.started);
+  }, [snap]);
+
+  function addQ(type, content){
+    const q = normQ({type, content});
+    if(!q) return;
+    const arr = (snap?.questions || []).concat([q]);
+    sessionRef(db, sessionKey).child("questions").set(arr);
+  }
+  function delQ(i){
+    const arr = (snap?.questions || []).slice(); arr.splice(i,1);
+    sessionRef(db, sessionKey).child("questions").set(arr);
+  }
+  function start(){
+    if(!snap?.questions || snap.questions.length===0) return alert("En az bir soru ekle");
+    sessionRef(db, sessionKey).update({ started: true, current: 0, ready: {a:false,b:false}, revealed: {} });
+  }
+  function makeInvite(){
+    const url = new URL(window.location.href);
+    url.searchParams.set("k", sessionKey);
+    url.searchParams.set("r", "m");
+    try{ navigator.clipboard.writeText(url.toString()); }catch(e){}
+    alert("Davet linki kopyalandı:\n"+url.toString());
+  }
+  function hardReset(){
+    // only female can call
+    sessionRef(db, sessionKey).set({ started:false, questions:[], current:0, answers:{}, ready:{a:false,b:false}, revealed:{} });
+  }
+
+  if(!snap){
+    // Initialize empty session root if missing
+    sessionRef(db, sessionKey).update({ started:false, current:0, questions:[], answers:{}, ready:{a:false,b:false}, revealed:{} });
+    return <Loading text="Oturum hazırlanıyor..." />;
+  }
+
+  if(!started){
+    return (
+      <div className="max-w-4xl mx-auto">
+        <HeaderBar sessionKey={sessionKey} onReset={hardReset} />
+        <FemaleBuilder questions={snap.questions||[]} addQ={addQ} delQ={delQ} start={start} invite={makeInvite} />
+      </div>
+    );
+  }
+  return <LivePlay fb={fb} sessionKey={sessionKey} role="f" snap={snap} />;
+}
+
+// Male app (wait or play)
+function MaleApp({fb, sessionKey}){
+  const db = fb.db;
+  const [snap, setSnap] = useState(null);
+  useEffect(()=>{
+    const ref = sessionRef(db, sessionKey);
+    ref.on("value", s => setSnap(s.val()));
+    return ()=> ref.off();
+  }, [db, sessionKey]);
+
+  if(!snap) return <Loading text="Oturuma bağlanılıyor..." />;
+  if(!snap.started){
+    return (
+      <div className="max-w-4xl mx-auto p-6 sm:p-8">
+        <Header />
+        <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-2">🧟‍♂️ Hoş geldin</h2>
+          <p className={`${palette.sub}`}>🧟‍♀️ soruları ayarlasın, sonra birlikte başlayacaksınız.</p>
+        </div>
+        <Footer/>
+      </div>
+    );
+  }
+  return <LivePlay fb={fb} sessionKey={sessionKey} role="m" snap={snap} />;
+}
+
+function HeaderBar({sessionKey, onReset}){
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <Header />
+      <div className="flex items-center gap-3 text-sm">
+        <span>Oturum: <span className="font-mono">{sessionKey}</span></span>
+        <button onClick={onReset} className="text-xs underline">Reset</button>
+      </div>
+    </div>
+  );
+}
+
+function FemaleBuilder({questions, addQ, delQ, start, invite}){
+  const [type, setType] = useState("open");
+  const [content, setContent] = useState("");
+  return (
+    <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl sm:text-2xl font-semibold">🧟‍♀️ Soruları Oluştur</h2>
+        <button onClick={invite} className={`px-3 py-1 rounded-lg text-sm ${palette.accent}`}>🧷 Davet Linkini Kopyala</button>
+      </div>
+      <div className={`rounded-xl p-4 ${palette.accent} mb-4`}>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <select value={type} onChange={e=>setType(e.target.value)} className="px-3 py-2 rounded-xl bg-white/80">
+            <option value="open">Açık uçlu</option>
+            <option value="yn">Evet/Hayır</option>
+          </select>
+          <input value={content} onChange={e=>setContent(e.target.value)} placeholder="Soru metni" className="px-3 py-2 rounded-xl bg-white/80" />
+          <button onClick={()=>{ addQ(type, content); setContent(""); }} className={`px-4 py-2 rounded-xl font-semibold ${palette.cta} text-white`}>Ekle</button>
+        </div>
+      </div>
+
+      <div className="space-y-2 mb-4">
+        {(questions||[]).map((q,i)=>(
+          <div key={i} className={`flex items-center gap-3 p-3 rounded-xl ${palette.accent}`}>
+            <span className="text-sm font-medium w-6 text-center">{i+1}</span>
+            <span className="text-sm">{q.type==="yn" ? "E/H" : "Açık"}</span>
+            <div className="flex-1">{q.content}</div>
+            <button onClick={()=>delQ(i)} className="text-xs px-3 py-1 rounded-lg bg-red-100 text-red-700">Sil</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex justify-end">
+        <button onClick={start} disabled={!questions || questions.length===0} className={`px-5 py-2.5 rounded-xl font-semibold ${!questions || questions.length===0 ? "bg-gray-300 cursor-not-allowed" : palette.cta + " text-white"}`}>Başlat</button>
+      </div>
+    </div>
+  );
+}
+
+function LivePlay({fb, sessionKey, role, snap}){
+  const db = fb.db;
+  const idx = snap.current || 0;
+  const q = (snap.questions||[])[idx];
+  const total = (snap.questions||[]).length || 0;
+  const answers = snap.answers || {};
+  const ready = snap.ready || {a:false,b:false};
+  const revealed = snap.revealed || {};
+  const isRevealed = !!revealed[idx];
+  const side = role==="f" ? "a" : "b";
+  const myVal = (answers[idx]?.[side]) || "";
+  const myReady = !!ready[side];
+  const bothReady = !!(ready.a && ready.b);
+
+  // listeners set by parent via value subscription; we just write
+
+  function setAnswer(val){
+    const path = sessionRef(db, sessionKey).child(`answers/${idx}/${side}`);
+    path.set(val);
+  }
+  function toggleReady(){
+    const path = sessionRef(db, sessionKey).child(`ready/${side}`);
+    path.set(!myReady);
+  }
+  function tryReveal(){
+    if(bothReady && !isRevealed){
+      // atomic: mark revealed for current
+      sessionRef(db, sessionKey).child(`revealed/${idx}`).set(true);
+    }
+  }
+  useEffect(()=>{ tryReveal(); }, [bothReady, isRevealed, idx]);
+
+  function next(){
+    if(!isRevealed) return;
+    const root = sessionRef(db, sessionKey);
+    root.update({ current: idx+1 });
+    root.child("ready").set({a:false,b:false});
+  }
+  function prev(){
+    const root = sessionRef(db, sessionKey);
+    const newIdx = Math.max(0, idx-1);
+    root.update({ current: newIdx });
+    root.child("ready").set({a:false,b:false});
+  }
+
+  if(!q){
+    return (
+      <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+        <h2 className="text-xl sm:text-2xl font-semibold mb-2">Bitti</h2>
+        <p className={`${palette.sub}`}>Sorular tükendi.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`rounded-2xl shadow-lg p-6 sm:p-8 ${palette.card}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs">Oturum: <span className="font-mono">{sessionKey}</span></div>
+        <div className="text-xs">Rol: {role==="f"?"🧟‍♀️":"🧟‍♂️"}</div>
+      </div>
+      <Progress current={idx} total={total} />
+      <h2 className="text-xl sm:text-2xl font-semibold mb-2">Soru</h2>
+      <p className={`${palette.sub} text-lg sm:text-xl mb-6`}>{q.content}</p>
+
+      <div className="grid md:grid-cols-1 gap-6">
+        <AnswerPad label={role==="f" ? "🧟‍♀️" : "🧟‍♂️"} type={q.type} value={myVal} onChange={setAnswer} disabled={isRevealed} />
+      </div>
+
+      <div className="mt-6 flex items-center justify-center">
+        <button onClick={toggleReady} className={`px-6 py-3 rounded-2xl font-semibold shadow ${myReady ? "bg-emerald-600 text-white" : "bg-white/80"} text-base`}>
+          {myReady ? "Hazırım" : "Hazırım (tıkla)"}
+        </button>
+      </div>
+
+      <div className="mt-6 flex items-center gap-2 justify-between">
+        <button onClick={prev} disabled={idx===0} className={`px-4 py-2 rounded-xl font-medium shadow ${idx===0 ? `${palette.accent} ${palette.sub} cursor-not-allowed` : `${palette.accent} hover:opacity-90`}`}>Geri</button>
+        <button onClick={next} disabled={!isRevealed} className={`px-4 py-2 rounded-xl font-semibold shadow ${!isRevealed ? `${palette.accent} ${palette.sub} cursor-not-allowed` : `${palette.cta} text-white hover:opacity-90`}`}>Sonraki Soru</button>
+      </div>
+
+      {isRevealed && (
+        <Modal onClose={()=>{ sessionRef(fb.db, sessionKey).child(`revealed/${idx}`).set(false); }}>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <RevealBox title="🧟‍♀️ — Cevap" text={fmt(q, answers[idx]?.a)} />
+            <RevealBox title="🧟‍♂️ — Cevap" text={fmt(q, answers[idx]?.b)} />
+          </div>
+          <div className="flex justify-end mt-4">
+            <button onClick={next} className="px-4 py-2 rounded-xl font-semibold bg-[#D38FA0] text-white hover:opacity-90">Sonraki Soru</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Progress({current, total}){
+  const pct = Math.round((current / Math.max(1,total)) * 100);
+  return (
+    <div className="mb-4 mt-3">
+      <div className={`h-2 rounded-full ${palette.accent}`}>
+        <div className={`h-2 rounded-full ${palette.cta}`} style={{width: pct+"%"}}/>
+      </div>
+      <div className={`text-xs mt-2 ${palette.sub}`}>Soru {Math.min(current+1,total)} / {total}</div>
+    </div>
+  );
+}
+
+function AnswerPad({label, type, value, onChange, disabled}){
+  return (
+    <div className={`rounded-2xl p-4 sm:p-5 ${palette.accent}`}>
+      <div className="font-semibold mb-2">{label}</div>
+      {type==="yn" ? (
+        <YNButtons value={value} onChange={onChange} disabled={disabled} />
+      ) : (
+        <textarea value={value||""} onChange={(e)=>onChange(e.target.value)} placeholder="Cevabını yaz…" className={`w-full h-28 sm:h-32 resize-none rounded-xl px-3 py-2 outline-none focus:ring-2 ${palette.ring} ${disabled? "opacity-60":""}`} disabled={disabled} />
+      )}
+      <div className={`text-xs mt-2 ${palette.sub}`}>Not: İkiniz de Hazırım deyince pop-up açılır.</div>
+    </div>
+  );
+}
+
+function YNButtons({value, onChange, disabled}){
+  const yes = value==="EVET"; const no = value==="HAYIR";
+  return (
+    <div className="flex gap-3">
+      <button type="button" onClick={()=>!disabled && onChange("EVET")} className={`flex-1 px-4 py-3 rounded-xl shadow text-center transition ${yes ? "bg-rose-500 text-white" : "bg-white/80 hover:bg-white"}`} disabled={disabled}><span className="mr-1">❤️</span> Evet</button>
+      <button type="button" onClick={()=>!disabled && onChange("HAYIR")} className={`flex-1 px-4 py-3 rounded-xl shadow text-center transition ${no ? "bg-rose-500 text-white" : "bg-white/80 hover:bg-white"}`} disabled={disabled}><span className="mr-1">💔</span> Hayır</button>
+    </div>
+  );
+}
+
+function RevealBox({title, text}){
+  return (
+    <div className="rounded-2xl p-4 sm:p-5 bg-white/70 shadow-inner">
+      <div className="text-sm font-semibold mb-2">{title}</div>
+      <div className="whitespace-pre-wrap leading-relaxed">{text}</div>
+    </div>
+  );
+}
+
+function Modal({children, onClose}){
+  return (
+    <div id="reveal" className="fixed inset-0 flex items-center justify-center bg-black/30 p-4 z-50">
+      <div className={`max-w-3xl w-full rounded-2xl ${palette.card} shadow-xl p-6 relative`}>
+        {onClose && <button onClick={onClose} className="absolute right-3 top-3 text-sm">✕</button>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Header(){
+  return (
+    <header className="mb-6 sm:mb-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">seçose - çoçose coop</h1>
+        <span className={`px-3 py-1 rounded-full text-xs sm:text-sm ${palette.accent} ${palette.text}`}>İkili Soru-Cevap</span>
+      </div>
+    </header>
+  );
+}
+
+function Footer(){
+  return (
+    <footer className="mt-8 text-xs opacity-80">
+      <div className={`${palette.sub}`}>© seçose - çoçose coop — realtime v5</div>
+      <div className={`${palette.sub}`}>Lo-fi pembe tema. Firebase Realtime Database ile eş zamanlı.</div>
+    </footer>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+
+
+
+
+
+
+
+
+<button id="summaryBtn" class="summary-btn" title="Tüm cevapları gör">📄 Özet</button>
+
+<script>
+(function(){
+  // --- helpers ---
+  function getParam(name){
+    var m = (location.search||'').match(new RegExp('[?&]'+name+'=([^&]+)','i'));
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function getSessionKey(){
+    if (typeof sessionKey !== 'undefined' && sessionKey) return sessionKey;
+    return getParam('k');
+  }
+  function esc(s){
+    s = (s==null?'':String(s));
+    return s.replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; });
+  }
+
+  // --- role lock: only host (r=f/host/owner) can advance ---
+  var role = (getParam('r')||'').toLowerCase();
+  var isHost = role === 'f' || role === 'host' || role === 'owner';
+
+  function lockNextButtons(){
+    var btns = Array.prototype.slice.call(document.querySelectorAll('button'));
+    btns.filter(function(b){ return /sonraki soru/i.test((b.textContent||'')); })
+        .forEach(function(b){
+          b.disabled = !isHost;
+          if(!isHost){ b.title = 'Sadece oturumu başlatan ilerletebilir'; b.style.opacity = '0.55'; b.style.cursor = 'not-allowed'; }
+        });
+    // popup içindeki varyasyonlar
+    ['nextInPopup','nextInPopupFixed'].forEach(function(id){
+      var b = document.getElementById(id);
+      if(b){ b.disabled = !isHost; if(!isHost){ b.title = 'Sadece oturumu başlatan ilerletebilir'; } }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', lockNextButtons);
+  document.addEventListener('click', function(){ setTimeout(lockNextButtons, 50); }, true);
+
+  // next() guard: if available, wrap; else attach capture listener to intercept clicks
+  var _next = window.next;
+  if(typeof _next === 'function'){
+    window.next = function(){
+      if(!isHost){ alert('Sadece kurucu (🧟‍♀️) "Sonraki Soru" yapabilir.'); return; }
+      return _next.apply(this, arguments);
+    };
+  } else {
+    document.addEventListener('click', function(ev){
+      var t = ev.target;
+      if(t && t.closest && /sonraki soru/i.test((t.textContent||'')) && !isHost){
+        ev.preventDefault(); ev.stopPropagation();
+        alert('Sadece kurucu (🧟‍♀️) "Sonraki Soru" yapabilir.');
+      }
+    }, true);
+  }
+
+  // --- summary popup (optional) and inline summary (mandatory) ---
+  function buildDoc(k, qs, ans){
+    var rows = "";
+    for(var i=0;i<qs.length;i++){
+      var q = qs[i] || {};
+      var a = (ans[i] && (ans[i].a!=null?ans[i].a:"(seçilmedi)")) || "(seçilmedi)";
+      var b = (ans[i] && (ans[i].b!=null?ans[i].b:"(seçilmedi)")) || "(seçilmedi)";
+      rows += "<tr><td class=\"q\">"+esc(q.content||"")+"</td><td class=\"a\">"+esc(a)+"</td><td class=\"b\">"+esc(b)+"</td></tr>";
+    }
+    var doc = "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>seçose — Özet</title>"+
+      "<style>body{font-family:ui-sans-serif,system-ui,Segoe UI,Arial;margin:0;padding:24px;background:#FAF3F6;color:#3E2B31;}"+
+      "h1{margin:0 0 12px}.meta{opacity:.7;margin-bottom:16px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.06)}"+
+      "th,td{padding:12px;border-bottom:1px solid #f0e4ea;vertical-align:top}th{text-align:left;background:#F6E8EE}tr:last-child td{border-bottom:none}td.q{width:42%}td.a{width:29%}td.b{width:29%}"+
+      ".print{margin:14px 0 0;display:inline-block;background:#D38FA0;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-weight:600}</style></head><body>"+
+      "<h1>🧟‍♀️🧟‍♂️ seçose — tüm cevaplar</h1><div class=\"meta\">Oturum: <b>"+esc(k)+"</b> • Soru sayısı: <b>"+qs.length+"</b></div>"+
+      "<table><thead><tr><th>Soru</th><th>🧟‍♀️</th><th>🧟‍♂️</th></tr></thead><tbody>"+(rows||"<tr><td colspan=\"3\">Henüz soru yok.</td></tr>")+"</tbody></table>"+
+      "<a class=\"print\" href=\"javascript:window.print()\">PDF olarak yazdır</a></body></html>";
+    return doc;
+  }
+
+  function openSummary(){
+    if(!window.firebase || !firebase.apps || !firebase.apps.length){ alert("Firebase yok: oturuma bağlı değil."); return; }
+    var k = getSessionKey(); if(!k){ alert("Oturum anahtarı (k) yok."); return; }
+    firebase.database().ref("sessions/"+k).get().then(function(snap){
+      var data = snap.val() || {};
+      var qs = data.questions || [];
+      var ans = data.answers || {};
+      var w = window.open("", "_blank");
+      if(!w){ alert("Pop-up engellendi. Lütfen bu site için izin ver."); return; }
+      var doc = buildDoc(k, qs, ans);
+      w.document.open(); w.document.write(doc); w.document.close();
+    }).catch(function(err){
+      alert("Özet oluşturulamadı: " + (err && err.message ? err.message : err));
+    });
+  }
+  window.openSummary = openSummary;
+
+  // Inline summary renderer
+  function renderInlineSummary(){
+    if(!window.firebase || !firebase.apps || !firebase.apps.length) return;
+    var k = getSessionKey(); if(!k) return;
+    firebase.database().ref('sessions/'+k).get().then(function(snap){
+      var data = snap.val()||{};
+      var qs = data.questions||[];
+      var ans = data.answers||{};
+      var rows = "";
+      for(var i=0;i<qs.length;i++){
+        var q = qs[i]||{};
+        var a = (ans[i] && (ans[i].a!=null?ans[i].a:'(seçilmedi)')) || '(seçilmedi)';
+        var b = (ans[i] && (ans[i].b!=null?ans[i].b:'(seçilmedi)')) || '(seçilmedi)';
+        rows += "<tr><td>"+esc(q.content||"")+"</td><td>"+esc(a)+"</td><td>"+esc(b)+"</td></tr>";
+      }
+      var host = document.getElementById('inlineSummary');
+      if(!host){
+        host = document.createElement('div');
+        host.id = 'inlineSummary';
+        host.style.margin = '20px 0 40px';
+        host.style.background = '#fff';
+        host.style.borderRadius = '14px';
+        host.style.boxShadow = '0 10px 28px rgba(0,0,0,.06)';
+        host.innerHTML = "<div style='padding:14px 16px;background:#F6E8EE;font-weight:700;border-bottom:1px solid #f0e4ea'>Özet — tüm cevaplar</div>"
+          + "<div style='padding:12px 16px;overflow-x:auto;'><table style='width:100%;border-collapse:collapse'><thead><tr><th style='text-align:left;padding:8px 6px;border-bottom:1px solid #f0e4ea'>Soru</th><th style='text-align:left;padding:8px 6px;border-bottom:1px solid #f0e4ea'>🧟‍♀️</th><th style='text-align:left;padding:8px 6px;border-bottom:1px solid #f0e4ea'>🧟‍♂️</th></tr></thead><tbody id='inlineSummaryBody'></tbody></table></div>";
+        document.body.appendChild(host);
+      }
+      var body = document.getElementById('inlineSummaryBody');
+      if(body){ body.innerHTML = rows; window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'}); }
+    });
+  }
+
+  // Auto open summary (inline) when finished; also keep the floating button for popup PDF
+  try{
+    if(window.firebase && firebase.apps && firebase.apps.length){
+      var k = getSessionKey();
+      if(k){
+        firebase.database().ref('sessions/'+k).on('value', function(s){
+          var v = s.val()||{};
+          var qs = v.questions||[];
+          var cur = v.current||0;
+          if(qs.length>0 && cur >= qs.length){
+            renderInlineSummary();
+          }
+        });
+      }
+    }
+  }catch(e){}
+
+  // Hook floating button to popup summary
+  var btn = document.getElementById('summaryBtn');
+  if(btn){ btn.addEventListener('click', openSummary); }
+})();
+</script>
+
+</body>
+</html>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const host = document.querySelector('#reveal > div') || document.querySelector('.pop > div');
+  if(!host || host.querySelector('.brand-sticker')) return;
+  const img = document.createElement('img');
+  img.src = 'logo.jpg'; img.alt = 'biz'; img.className = 'brand-sticker';
+  host.appendChild(img);
+});
+</script>
